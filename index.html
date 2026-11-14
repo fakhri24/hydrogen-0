@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CUBIX 3D — Roll the Block Puzzle</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script defer src="js/levels.js"></script>
+  <script defer src="js/storage.js"></script>
+  <script defer src="js/audio.js"></script>
+  <script defer src="js/renderer3d.js"></script>
+  <script defer src="js/game.js"></script>
+  <script defer src="js/main.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hud-bar">
+      <div class="brand-group">
+        <span class="brand-logo" aria-hidden="true">◆</span>
+        <div>
+          <h1 class="brand-title">CUBIX 3D</h1>
+          <p class="brand-sub" id="hud-level-name">First Steps</p>
+        </div>
+        <span class="level-badge" id="hud-level-badge">LEVEL 1/10</span>
+      </div>
+
+      <div class="stats-group" aria-label="Statistik Level">
+        <div class="stat-pill">
+          <span class="stat-label">Langkah</span>
+          <strong class="stat-val" id="hud-moves">0</strong>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-label">Par</span>
+          <strong class="stat-val" id="hud-par">11</strong>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-label">Terbaik</span>
+          <strong class="stat-val" id="hud-best">—</strong>
+        </div>
+      </div>
+
+      <div class="actions-group">
+        <button type="button" class="btn btn-secondary" id="btn-undo" title="Undo (Z)">↩ Undo</button>
+        <button type="button" class="btn btn-secondary" id="btn-restart" title="Ulangi (R)">↻ Ulangi</button>
+        <button type="button" class="btn btn-secondary" id="btn-levels">☰ Level</button>
+        <button type="button" class="btn btn-secondary" id="btn-sound" aria-pressed="true">🔊 Suara: ON</button>
+        <button type="button" class="btn btn-secondary" id="btn-save">💾 Data</button>
+      </div>
+    </header>
+
+    <main class="stage-area">
+      <canvas id="game-canvas" aria-label="Arena Puzzle 3D CUBIX"></canvas>
+
+      <div class="hint-banner" id="hud-hint">
+        Gunakan Tombol Panah atau WASD. Berdiri tegak tepat di atas portal tujuan.
+      </div>
+
+      <div class="dpad-overlay" aria-label="Kontrol Arah">
+        <button type="button" class="dpad-btn dpad-up" data-dir="UP" aria-label="Geser Atas">▲</button>
+        <button type="button" class="dpad-btn dpad-left" data-dir="LEFT" aria-label="Geser Kiri">◀</button>
+        <button type="button" class="dpad-btn dpad-down" data-dir="DOWN" aria-label="Geser Bawah">▼</button>
+        <button type="button" class="dpad-btn dpad-right" data-dir="RIGHT" aria-label="Geser Kanan">▶</button>
+      </div>
+    </main>
+
+    <footer class="legend-bar">
+      <span><i class="dot dot-goal"></i> Portal Tujuan (Berdiri)</span>
+      <span><i class="dot dot-fragile"></i> Kaca Rapuh (Hanya Tidur)</span>
+      <span><i class="dot dot-soft"></i> ○ Switch Ringan</span>
+      <span><i class="dot dot-heavy"></i> ✕ Switch Berat (Berdiri)</span>
+      <span class="kbd-tip">Kontrol: <kbd>WASD</kbd> / <kbd>Panah</kbd> · <kbd>Z</kbd> Undo · <kbd>R</kbd> Ulangi</span>
+    </footer>
+  </div>
+
+  <!-- Modal Pilih Level -->
+  <dialog id="dialog-levels" class="game-dialog" aria-labelledby="levels-title">
+    <div class="dialog-header">
+      <h2 id="levels-title">Pilih Level</h2>
+      <button type="button" class="btn-icon" data-close-dialog aria-label="Tutup">✕</button>
+    </div>
+    <div id="levels-grid" class="levels-grid"></div>
+  </dialog>
+
+  <!-- Modal Menang -->
+  <dialog id="dialog-win" class="game-dialog dialog-compact" aria-labelledby="win-title">
+    <div class="win-content">
+      <div class="win-stars" id="win-stars">★★★</div>
+      <h2 id="win-title">Level Selesai!</h2>
+      <p id="win-stats" class="win-stats">Selesai dalam 11 langkah (Par: 11)</p>
+      <div class="win-actions">
+        <button type="button" class="btn btn-secondary" id="btn-replay-level">↻ Main Lagi</button>
+        <button type="button" class="btn btn-primary" id="btn-next-level">Level Berikutnya →</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Modal Manajemen Save Data (localStorage) -->
+  <dialog id="dialog-save" class="game-dialog" aria-labelledby="save-title">
+    <div class="dialog-header">
+      <h2 id="save-title">Progres &amp; Backup (localStorage)</h2>
+      <button type="button" class="btn-icon" data-close-dialog aria-label="Tutup">✕</button>
+    </div>
+    <div class="save-body">
+      <div class="save-section">
+        <label for="save-export-text">Ekspor Kode Save</label>
+        <div class="save-row">
+          <input id="save-export-text" type="text" readonly />
+          <button type="button" class="btn btn-secondary" id="btn-copy-save">Salin</button>
+        </div>
+      </div>
+      <div class="save-section">
+        <label for="save-import-text">Impor Kode Save</label>
+        <textarea id="save-import-text" rows="3" placeholder="Tempel kode save di sini..."></textarea>
+        <div class="save-row-end">
+          <button type="button" class="btn btn-primary" id="btn-import-save">Pulihkan Progres</button>
+        </div>
+      </div>
+      <p id="save-feedback" class="save-feedback" role="status"></p>
+      <hr class="divider" />
+      <div class="save-danger">
+        <span>Hapus seluruh progres tersimpan di browser ini:</span>
+        <button type="button" class="btn btn-danger" id="btn-reset-save">Reset Progres</button>
+      </div>
+    </div>
+  </dialog>
+</body>
+</html>
